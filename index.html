@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV to JSON Converter</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        img {
+            width: 100px; /* Đặt kích thước cho hình ảnh */
+        }
+        .error-message {
+            color: red;
+            margin-top: 10px;
+        }
+        .info-message {
+            color: green;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>CSV to JSON Converter</h1>
+    <input type="file" id="csv-file" accept=".csv">
+    <div id="message" class="info-message"></div>
+    <table id="data-table">
+        <thead>
+            <tr>
+                <th>BookName</th>
+                <th>Title</th>
+                <th>Author(s)</th>
+                <th>ImageBook</th>
+                <th>CategoryId</th>
+                <th>ISBN</th>
+                <th>PublishedDate</th>
+            </tr>
+        </thead>
+        <tbody id="data-body"></tbody>
+    </table>
+
+    <script>
+        document.getElementById('csv-file').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            const reader = new FileReader();
+
+            if (file) {
+                reader.onload = function(e) {
+                    const csvData = e.target.result;
+                    const json = csvToJson(csvData);
+                    displayData(json);
+                };
+
+                reader.readAsText(file);
+            } else {
+                showMessage("No file selected.", "error");
+            }
+        });
+
+        function csvToJson(csv) {
+            const lines = csv.split('\n').filter(line => line.trim() !== '');
+            const headers = lines[0].split(',').map(header => header.trim());
+
+            return lines.slice(1).map(line => {
+                const data = line.split(',').map(item => item.trim());
+                return headers.reduce((obj, header, index) => {
+                    obj[header] = data[index] || '';
+                    return obj;
+                }, {});
+            });
+        }
+
+        function displayData(json) {
+            const dataBody = document.getElementById('data-body');
+            const message = document.getElementById('message');
+            dataBody.innerHTML = ''; // Xóa nội dung cũ
+            message.innerHTML = ''; // Xóa thông điệp cũ
+
+            if (json.length === 0) {
+                showMessage("No data found in the CSV file.", "error");
+                return;
+            }
+
+            const json10Slice = json.slice(0, 10); // Lấy 10 dòng đầu tiên
+
+            json10Slice.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.BookName}</td>
+                    <td>${item.Title}</td>
+                    <td>${item.Author.replace(/;/g, ', ')}</td> <!-- Giả sử nhiều tác giả được phân tách bằng dấu chấm phẩy -->
+                    <td><img src="${item.ImageBook}" alt="Book Image"></td>
+                    <td>${item.CategoryId}</td>
+                    <td>${item.ISBN}</td>
+                    <td>${item.PublishedDate}</td>
+                `;
+                dataBody.appendChild(row);
+            });
+
+            showMessage("Data loaded successfully.", "info");
+        }
+
+        function showMessage(message, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = message;
+            messageDiv.className = type === "error" ? "error-message" : "info-message";
+        }
+    </script>
+</body>
+</html>

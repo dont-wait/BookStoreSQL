@@ -1,69 +1,92 @@
-import requests
-import random
 import csv
-from datetime import datetime, timedelta
+import os
 
-# Map thể loại tự định nghĩa (giả lập CategoryID)
-CATEGORY_MAP = {
-    'science_fiction': 1,
-    'fiction': 2,
-    'business': 3,
-    'technology': 4,
-    'psychology': 5,
-    'history': 6,
-    'self_help': 7,
-    'cooking': 8,
-    'philosophy': 9,
-    'travel': 10
-}
+def split_csv(input_file, output_dir):
+    # Tạo các set để lưu thông tin duy nhất của tác giả, thể loại và nhà xuất bản
+    authors_set = set()
+    categories_set = set()
+    publishers_set = set()
 
-# Set để đảm bảo ISBN không bị trùng
-existing_isbns = set()
+    # Mở file đầu vào và đọc dữ liệu
+    with open(input_file, mode='r', encoding='utf-8') as infile:
+        reader = csv.DictReader(infile)
+        books_data = []
 
-def get_books_by_subject(subject, max_books=100):
-    url = f'https://openlibrary.org/subjects/{subject}.json?limit={max_books}'
-    res = requests.get(url)
-    data = res.json()
-    books = []
+        for row in reader:
+            # Lưu thông tin tác giả
+            authors_set.add(row['authors'])
 
-    for book in data.get('works', []):
-        title = book.get('title')
-        authors = ', '.join(a['name'] for a in book.get('authors', []))
-        
-        # Nếu có ISBN trong dữ liệu, sử dụng ISBN đó
-        isbn = book.get('cover_edition_key') or f'ISBN-{random.randint(1000000, 9999999)}'
+            # Lưu thông tin thể loại
+            categories_set.add(row['category'])
 
-        # Đảm bảo ISBN duy nhất
-        while isbn in existing_isbns:
-            isbn = f'ISBN-{random.randint(1000000, 9999999)}'
-        existing_isbns.add(isbn)
-        
-        published_date = datetime.now() - timedelta(days=random.randint(0, 5000))
-        price = round(random.uniform(5.0, 100.0), 2)
-        stock = random.randint(1, 100)
+            # Lưu thông tin nhà xuất bản
+            publishers_set.add(row['manufacturer'])
 
-        books.append({
-            'Title': title,
-            'Author': authors,
-            'CategoryID': CATEGORY_MAP.get(subject, 1),
-            'Price': price,
-            'StockQuantity': stock,
-            'PublishedDate': published_date.date().isoformat(),
-            'ISBN': isbn
-        })
-    return books
+            # Lưu thông tin sách
+            books_data.append(row)
 
-# Tổng hợp nhiều thể loại
-subjects = list(CATEGORY_MAP.keys())
-all_books = []
-for subject in subjects:
-    all_books += get_books_by_subject(subject, max_books=100)
+    # Tạo danh sách ID cho tác giả, thể loại, và nhà xuất bản
+    authors_dict = {author: idx for idx, author in enumerate(authors_set, start=1)}
+    categories_dict = {category: idx for idx, category in enumerate(categories_set, start=1)}
+    publishers_dict = {publisher: idx for idx, publisher in enumerate(publishers_set, start=1)}
 
-# Ghi vào file CSV
-with open('books_data.csv', 'w', newline='', encoding='utf-8') as csvfile:
-    fieldnames = ['Title', 'Author', 'CategoryID', 'Price', 'StockQuantity', 'PublishedDate', 'ISBN']
-    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-    writer.writeheader()
-    writer.writerows(all_books)
+    # Tạo thư mục đầu ra nếu chưa tồn tại
+    os.makedirs(output_dir, exist_ok=True)
 
-print(f"✅ Đã lưu {len(all_books)} sách vào 'books_data.csv'")
+    # Đường dẫn các file đầu ra
+    authors_file = os.path.join(output_dir, 'authors.csv')
+    categories_file = os.path.join(output_dir, 'categories.csv')
+    publishers_file = os.path.join(output_dir, 'publishers.csv')
+    books_file = os.path.join(output_dir, 'books.csv')
+
+    # Ghi file tác giả
+    with open(authors_file, mode='w', encoding='utf-8', newline='') as outfile:
+        writer = csv.writer(outfile)
+        writer.writerow(['author_id', 'author_name'])
+        for author, author_id in authors_dict.items():
+            writer.writerow([author_id, author])
+
+    # Ghi file thể loại
+    with open(categories_file, mode='w', encoding='utf-8', newline='') as outfile:
+        writer = csv.writer(outfile)
+        writer.writerow(['category_id', 'category_name'])
+        for category, category_id in categories_dict.items():
+            writer.writerow([category_id, category])
+
+    # Ghi file nhà xuất bản
+    with open(publishers_file, mode='w', encoding='utf-8', newline='') as outfile:
+        writer = csv.writer(outfile)
+        writer.writerow(['publisher_id', 'publisher_name'])
+        for publisher, publisher_id in publishers_dict.items():
+            writer.writerow([publisher_id, publisher])
+
+    # Ghi file thông tin sách với mã ID
+    with open(books_file, mode='w', encoding='utf-8', newline='') as outfile:
+        writer = csv.DictWriter(outfile, fieldnames=[
+            'product_id', 'title', 'original_price', 'current_price',
+            'quantity', 'n_review', 'avg_rating', 'pages',
+            'author_id', 'category_id', 'publisher_id', 'cover_link'
+        ])
+        writer.writeheader()
+        for row in books_data:
+            writer.writerow({
+                'product_id': row['product_id'],
+                'title': row['title'],
+                'original_price': row['original_price'],
+                'current_price': row['current_price'],
+                'quantity': row['quantity'],
+                'n_review': row['n_review'],
+                'avg_rating': row['avg_rating'],
+                'pages': row['pages'],
+                'author_id': authors_dict[row['authors']],
+                'category_id': categories_dict[row['category']],
+                'publisher_id': publishers_dict[row['manufacturer']],
+                'cover_link': row['cover_link']
+            })
+
+# Đường dẫn file CSV gốc và thư mục đầu ra
+input_file = './archive/book_data.csv'  # Đổi thành tên file CSV gốc của bạn
+output_dir = 'output_files'  # Tên thư mục chứa các file đầu ra
+
+# Chạy hàm tách file
+split_csv(input_file, output_dir)

@@ -66,11 +66,11 @@ def save_to_csv(books, filename="books_dataset.csv"):
 # Loop with multiple queries to get more books
 all_books = []
 keywords = ["sport",
-            "anime",
-    # Economic
-    "economics", "financial", "investment", "money management", "business strategy",
-    # Tech (if you want to keep these)
-    "java", "python", "docker", "clean code", "spring boot"
+#             "anime",
+#     # Economic
+#     "economics", "financial", "investment", "money management", "business strategy",
+#     # Tech (if you want to keep these)
+#     "java", "python", "docker", "clean code", "spring boot"
     # Self-help & Motivation
     "productivity", "time management", "emotional intelligence", "self-esteem", "growth mindset",
     "positive thinking", "resilience", "mental health", "mindfulness", "goal setting",
